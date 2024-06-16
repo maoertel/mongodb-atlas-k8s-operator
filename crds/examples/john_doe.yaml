@@ -1,0 +1,13 @@
+apiVersion: moertel.com/v1
+kind: AtlasUser
+metadata:
+  name: johndoe
+  namespace: default
+spec:
+  country: US
+  firstName: John
+  lastName: Doe
+  username: johndoe@example.com
+  roles:
+  - orgId: "4723423423"
+    roleName: "ORG_OWNER"

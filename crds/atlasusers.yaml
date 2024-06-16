@@ -1,0 +1,63 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: atlasusers.moertel.com
+  namespace: default # For easier deployment and avoid permissions collisions on most clusters, the resource is namespace-scoped. More information at: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/
+spec:
+  group: moertel.com
+  names:
+    kind: AtlasUser
+    listKind: AtlasUserList
+    plural: atlasusers
+    singular: atlasuser
+    shortNames:
+      - atlasuser
+      - au
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                country:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                mobileNumber:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                roles:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-validations:
+                      - rule: "has(self.groupId) && (!has(self.orgId)) || (!has(self.groupId) && has(self.orgId))"
+                        message: "Either groupId or orgId must be set, but not both."
+                    properties:
+                      groupId:
+                        type: string
+                      orgId:
+                        type: string
+                      roleName:
+                        type: string
+                    required:
+                      - roleName
+                username:
+                  type: string
+                  format: email
+              required:
+                - country
+                - firstName
+                - lastName
+                - roles
+                - username
