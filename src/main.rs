@@ -1,15 +1,20 @@
 pub mod atlas;
+pub mod cli;
 pub mod control_loop_watcher;
-mod crd;
+pub mod crd;
 pub mod error;
+pub mod http_client;
 pub mod logger;
 
 use std::sync::Arc;
 
+use clap::Parser;
 use kube::Client;
 
 use crate::atlas::client::AtlasClient;
+use crate::atlas::client::ATLAS_API_CONTENT_TYPE;
 use crate::atlas::AtlasUserContext;
+use crate::cli::Cli;
 use crate::control_loop_watcher::AtlasUserReconciler;
 use crate::error::Result;
 
@@ -17,10 +22,14 @@ use crate::error::Result;
 async fn main() -> Result<()> {
     logger::init()?;
 
-    let public_key = String::from("ATLAS_PUBLIC_KEY");
-    let private_key = String::from("ATLAS_PRIVATE_KEY");
+    let Cli {
+        public_key,
+        private_key,
+    } = Cli::parse();
 
-    let atlas_client = AtlasClient::new(reqwest::Client::new(), public_key, private_key)?;
+    let http_client = http_client::accepts(ATLAS_API_CONTENT_TYPE)?;
+    let atlas_client = AtlasClient::new(http_client, public_key, private_key)?;
+
     let k8s_client = Client::try_default().await?;
     let atlas_context = Arc::new(AtlasUserContext::new(atlas_client, k8s_client));
 

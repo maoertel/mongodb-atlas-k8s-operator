@@ -8,6 +8,7 @@ use crate::atlas::error::Result;
 use crate::crd::AtlasUser;
 
 const ATLAS_API_URL: &str = "https://cloud.mongodb.com/api/atlas/v2/users";
+pub(crate) const ATLAS_API_CONTENT_TYPE: &str = "application/vnd.atlas.2023-02-01+json";
 
 pub struct AtlasClient {
     client: Client,
