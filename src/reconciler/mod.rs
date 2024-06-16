@@ -12,9 +12,9 @@ use kube::Resource;
 use kube::ResourceExt;
 
 use crate::atlas::AtlasUserContext;
-use crate::control_loop_watcher::error::Error;
-use crate::control_loop_watcher::error::Result;
 use crate::crd::AtlasUser;
+use crate::reconciler::error::Error;
+use crate::reconciler::error::Result;
 
 pub struct AtlasUserReconciler {
     crd_api: Api<AtlasUser>,
@@ -57,7 +57,7 @@ impl AtlasUserReconciler {
             "Expected AtlasUser resource to be namespaced. Can't deploy to an unknown namespace.".to_owned()
         }))?;
 
-        match determine_action(&atlas_user) {
+        match validate_change(&atlas_user) {
             AtlasUserAction::Create => {
                 log::info!("Creating user in Atlas: {atlas_user:?}");
                 atlas_context.handle_creation(&atlas_user, &namespace).await?;
@@ -82,7 +82,7 @@ impl AtlasUserReconciler {
     }
 }
 
-fn determine_action(atlas_user: &AtlasUser) -> AtlasUserAction {
+fn validate_change(atlas_user: &AtlasUser) -> AtlasUserAction {
     if atlas_user.meta().deletion_timestamp.is_some() {
         return AtlasUserAction::Delete;
     }

@@ -1,10 +1,10 @@
 pub mod atlas;
 pub mod cli;
-pub mod control_loop_watcher;
 pub mod crd;
 pub mod error;
 pub mod http_client;
 pub mod logger;
+pub mod reconciler;
 
 use std::sync::Arc;
 
@@ -15,8 +15,8 @@ use crate::atlas::client::AtlasClient;
 use crate::atlas::client::ATLAS_API_CONTENT_TYPE;
 use crate::atlas::AtlasUserContext;
 use crate::cli::Cli;
-use crate::control_loop_watcher::AtlasUserReconciler;
 use crate::error::Result;
+use crate::reconciler::AtlasUserReconciler;
 
 #[tokio::main]
 async fn main() -> Result<()> {

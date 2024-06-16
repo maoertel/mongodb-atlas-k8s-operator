@@ -7,8 +7,8 @@ use crate::atlas::error::Error;
 use crate::atlas::error::Result;
 use crate::crd::AtlasUser;
 
-const ATLAS_API_URL: &str = "https://cloud.mongodb.com/api/atlas/v2/users";
-pub(crate) const ATLAS_API_CONTENT_TYPE: &str = "application/vnd.atlas.2023-02-01+json";
+pub(crate) const ATLAS_API_CONTENT_TYPE: &str = "application/vnd.atlas.2023-01-01+json";
+const ATLAS_API_USER_URL: &str = "https://cloud.mongodb.com/api/atlas/v2/users";
 
 pub struct AtlasClient {
     client: Client,
@@ -28,7 +28,7 @@ impl AtlasClient {
     pub(crate) async fn create_atlas_user(&self, atlas_user: &AtlasUser) -> Result<()> {
         let response = self
             .client
-            .post(ATLAS_API_URL)
+            .post(ATLAS_API_USER_URL)
             .json(&atlas_user.spec)
             .send_with_digest_auth(&self.api_key, &self.api_secret)
             .await?;
