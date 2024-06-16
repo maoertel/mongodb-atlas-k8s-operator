@@ -1,3 +1,4 @@
+pub mod client;
 pub mod error;
 
 use kube::api::Patch;
@@ -8,10 +9,12 @@ use kube::ResourceExt;
 use serde_json::json;
 use serde_json::Value;
 
+use crate::atlas::client::AtlasClient;
 use crate::atlas::error::Result;
 use crate::crd::AtlasUser;
 
 pub struct AtlasUserContext {
+    atlas_client: AtlasClient,
     k8s_client: Client,
 }
 
@@ -21,12 +24,16 @@ enum FinalizerAction {
 }
 
 impl AtlasUserContext {
-    pub fn new(k8s_client: Client) -> Self {
-        AtlasUserContext { k8s_client }
+    pub fn new(atlas_client: AtlasClient, k8s_client: Client) -> Self {
+        AtlasUserContext {
+            atlas_client,
+            k8s_client,
+        }
     }
 
     pub async fn handle_creation(&self, atlas_user: &AtlasUser, namespace: &str) -> Result<AtlasUser> {
         // Create the user in Atlas
+        self.atlas_client.create_atlas_user(atlas_user).await?;
         self.finalizer(FinalizerAction::Add, atlas_user, namespace).await
     }
 
