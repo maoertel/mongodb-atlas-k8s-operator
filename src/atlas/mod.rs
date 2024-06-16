@@ -4,6 +4,7 @@ use kube::api::Patch;
 use kube::api::PatchParams;
 use kube::Api;
 use kube::Client;
+use kube::ResourceExt;
 use serde_json::json;
 use serde_json::Value;
 
@@ -24,18 +25,19 @@ impl AtlasUserContext {
         AtlasUserContext { k8s_client }
     }
 
-    pub async fn handle_creation(&self, _atlas_user: &AtlasUser, name: &str, namespace: &str) -> Result<AtlasUser> {
+    pub async fn handle_creation(&self, atlas_user: &AtlasUser, namespace: &str) -> Result<AtlasUser> {
         // Create the user in Atlas
-        self.finalizer(FinalizerAction::Add, name, namespace).await
+        self.finalizer(FinalizerAction::Add, atlas_user, namespace).await
     }
 
-    pub async fn handle_deletion(&self, _atlas_user: &AtlasUser, name: &str, namespace: &str) -> Result<AtlasUser> {
+    pub async fn handle_deletion(&self, atlas_user: &AtlasUser, namespace: &str) -> Result<AtlasUser> {
         // Remove a user in Atlas
-        self.finalizer(FinalizerAction::Remove, name, namespace).await
+        self.finalizer(FinalizerAction::Remove, atlas_user, namespace).await
     }
 
-    async fn finalizer(&self, action: FinalizerAction, name: &str, namespace: &str) -> Result<AtlasUser> {
+    async fn finalizer(&self, action: FinalizerAction, atlas_user: &AtlasUser, namespace: &str) -> Result<AtlasUser> {
         let api = Api::namespaced(self.k8s_client.to_owned(), namespace);
+        let name = atlas_user.name_unchecked();
         let finalizer = json!({
             "metadata": {
                 "finalizers":  match action {
@@ -46,6 +48,6 @@ impl AtlasUserContext {
         });
         let patch: Patch<&Value> = Patch::Merge(&finalizer);
 
-        Ok(api.patch(name, &PatchParams::default(), &patch).await?)
+        Ok(api.patch(&name, &PatchParams::default(), &patch).await?)
     }
 }

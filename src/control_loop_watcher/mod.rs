@@ -57,22 +57,19 @@ impl AtlasUserReconciler {
             "Expected AtlasUser resource to be namespaced. Can't deploy to an unknown namespace.".to_owned()
         }))?;
 
-        // TODO: Find a more save way
-        let name = atlas_user.name_unchecked();
-
         match determine_action(&atlas_user) {
             AtlasUserAction::Create => {
-                log::info!("Creating user in Atlas: {:?}", atlas_user);
-                atlas_context.handle_creation(&atlas_user, &name, &namespace).await?;
+                log::info!("Creating user in Atlas: {atlas_user:?}");
+                atlas_context.handle_creation(&atlas_user, &namespace).await?;
                 Ok(Action::requeue(Duration::from_secs(10)))
             }
             AtlasUserAction::Delete => {
-                log::info!("Deleting user in Atlas: {:?}", atlas_user);
-                atlas_context.handle_deletion(&atlas_user, &name, &namespace).await?;
+                log::info!("Deleting user in Atlas: {atlas_user:?}");
+                atlas_context.handle_deletion(&atlas_user, &namespace).await?;
                 Ok(Action::await_change())
             }
             AtlasUserAction::NoOp => {
-                log::info!("No action required for AtlasUser: {:?}", atlas_user);
+                log::info!("No action required for AtlasUser: {atlas_user:?}");
                 Ok(Action::requeue(Duration::from_secs(10)))
             }
         }
@@ -80,7 +77,7 @@ impl AtlasUserReconciler {
 
     /// Unused argument `_context`: Context Data "injected" automatically by kube-rs.
     pub fn on_error(atlas_user: Arc<AtlasUser>, error: &Error, _context: Arc<AtlasUserContext>) -> Action {
-        log::error!("Reconciliation error:\n{:?}.\n{:?}", error, atlas_user);
+        log::error!("Reconciliation error:\n{error:?}.\n{atlas_user:?}");
         Action::requeue(Duration::from_secs(5))
     }
 }
