@@ -1,100 +1,47 @@
+pub mod atlasuser;
 pub mod error;
 
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::sync::Arc;
-use std::time::Duration;
 
 use futures::stream::StreamExt;
+use futures::Future;
 use kube::runtime::controller::Action;
 use kube::runtime::watcher::Config;
 use kube::runtime::Controller;
 use kube::Api;
 use kube::Resource;
-use kube::ResourceExt;
+use serde::de::DeserializeOwned;
 
-use crate::atlas::AtlasUserContext;
-use crate::crd::AtlasUser;
 use crate::reconciler::error::Error;
 use crate::reconciler::error::Result;
 
-pub struct AtlasUserReconciler {
-    crd_api: Api<AtlasUser>,
-    atlas_context: Arc<AtlasUserContext>,
-}
+pub trait Reconcile<Crd, Ctx>
+where
+    Crd: Clone + Resource + DeserializeOwned + Debug + Send + Sync + 'static,
+    Crd::DynamicType: Default + Eq + Hash + Clone + Debug + Unpin,
+{
+    fn reconcile(crd: Arc<Crd>, context: Arc<Ctx>) -> impl Future<Output = Result<Action>> + Send + 'static;
+    fn error_policy(crd: Arc<Crd>, error: &Error, context: Arc<Ctx>) -> Action;
+    fn crd_api(&self) -> Api<Crd>;
+    fn config(&self) -> Config;
+    fn context(&self) -> Arc<Ctx>;
 
-enum AtlasUserAction {
-    Create,
-    Delete,
-    NoOp,
-}
-
-impl AtlasUserReconciler {
-    pub fn new(k8s_client: kube::Client, atlas_context: Arc<AtlasUserContext>) -> Self {
-        AtlasUserReconciler {
-            crd_api: Api::all(k8s_client),
-            atlas_context,
-        }
-    }
-
-    pub async fn start(self) {
-        Controller::new(self.crd_api, Config::default())
-            .run(Self::reconcile, Self::on_error, self.atlas_context)
+    #[allow(async_fn_in_trait)]
+    async fn start(&self) {
+        Controller::new(self.crd_api(), self.config())
+            .run(Self::reconcile, Self::error_policy, self.context())
             .for_each(|reconciliation_result| async move {
                 match reconciliation_result {
-                    Ok(atlas_user_resource) => {
-                        log::info!("Reconciliation successful. Resource: {atlas_user_resource:?}");
+                    Ok(resource) => {
+                        log::info!("Reconciliation successful. Resource: {resource:?}");
                     }
-                    Err(reconciliation_err) => {
-                        log::error!("Reconciliation error: {reconciliation_err:?}");
+                    Err(error) => {
+                        log::error!("Reconciliation error: {error:?}");
                     }
                 }
             })
             .await;
     }
-
-    async fn reconcile(atlas_user: Arc<AtlasUser>, atlas_context: Arc<AtlasUserContext>) -> Result<Action> {
-        // TODO Validation: Check if the namespace exists in the cluster.
-        let namespace = atlas_user.namespace().ok_or(Error::UserInputError({
-            "Expected AtlasUser resource to be namespaced. Can't deploy to an unknown namespace.".to_owned()
-        }))?;
-
-        match validate_change(&atlas_user) {
-            AtlasUserAction::Create => {
-                log::info!("Creating user in Atlas: {atlas_user:?}");
-                atlas_context.handle_creation(&atlas_user, &namespace).await?;
-                Ok(Action::requeue(Duration::from_secs(10)))
-            }
-            AtlasUserAction::Delete => {
-                log::info!("Deleting user in Atlas: {atlas_user:?}");
-                atlas_context.handle_deletion(&atlas_user, &namespace).await?;
-                Ok(Action::await_change())
-            }
-            AtlasUserAction::NoOp => {
-                log::info!("No action required for AtlasUser: {atlas_user:?}");
-                Ok(Action::requeue(Duration::from_secs(10)))
-            }
-        }
-    }
-
-    /// Unused argument `_context`: Context Data "injected" automatically by kube-rs.
-    pub fn on_error(atlas_user: Arc<AtlasUser>, error: &Error, _context: Arc<AtlasUserContext>) -> Action {
-        log::error!("Reconciliation error:\n{error:?}.\n{atlas_user:?}");
-        Action::requeue(Duration::from_secs(5))
-    }
-}
-
-fn validate_change(atlas_user: &AtlasUser) -> AtlasUserAction {
-    if atlas_user.meta().deletion_timestamp.is_some() {
-        return AtlasUserAction::Delete;
-    }
-
-    if atlas_user
-        .meta()
-        .finalizers
-        .as_ref()
-        .map_or(true, |finalizers| finalizers.is_empty())
-    {
-        return AtlasUserAction::Create;
-    }
-
-    AtlasUserAction::NoOp
 }

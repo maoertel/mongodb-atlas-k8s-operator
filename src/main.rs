@@ -16,7 +16,8 @@ use crate::atlas::client::ATLAS_API_CONTENT_TYPE;
 use crate::atlas::AtlasUserContext;
 use crate::cli::Cli;
 use crate::error::Result;
-use crate::reconciler::AtlasUserReconciler;
+use crate::reconciler::atlasuser::AtlasUserReconciler;
+use crate::reconciler::Reconcile;
 
 #[tokio::main]
 async fn main() -> Result<()> {
