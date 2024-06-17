@@ -17,21 +17,20 @@ use serde::de::DeserializeOwned;
 use crate::reconciler::error::Error;
 use crate::reconciler::error::Result;
 
-pub trait Reconcile<Crd, Ctx>
+pub trait Reconcile<Crd, Ctx>: Sized
 where
     Crd: Clone + Resource + DeserializeOwned + Debug + Send + Sync + 'static,
     Crd::DynamicType: Default + Eq + Hash + Clone + Debug + Unpin,
 {
     fn reconcile(crd: Arc<Crd>, context: Arc<Ctx>) -> impl Future<Output = Result<Action>> + Send + 'static;
     fn error_policy(crd: Arc<Crd>, error: &Error, context: Arc<Ctx>) -> Action;
-    fn crd_api(&self) -> Api<Crd>;
-    fn config(&self) -> Config;
-    fn context(&self) -> Arc<Ctx>;
+    fn destruct(self) -> (Api<Crd>, Config, Arc<Ctx>);
 
     #[allow(async_fn_in_trait)]
-    async fn start(&self) {
-        Controller::new(self.crd_api(), self.config())
-            .run(Self::reconcile, Self::error_policy, self.context())
+    async fn start(self) {
+        let (crd_api, config, context) = self.destruct();
+        Controller::new(crd_api, config)
+            .run(Self::reconcile, Self::error_policy, context)
             .for_each(|reconciliation_result| async move {
                 match reconciliation_result {
                     Ok(resource) => {

@@ -63,16 +63,8 @@ impl Reconcile<AtlasUser, AtlasUserContext> for AtlasUserReconciler {
         Action::requeue(Duration::from_secs(5))
     }
 
-    fn context(&self) -> Arc<AtlasUserContext> {
-        Arc::clone(&self.atlas_context)
-    }
-
-    fn crd_api(&self) -> Api<AtlasUser> {
-        self.crd_api.clone()
-    }
-
-    fn config(&self) -> Config {
-        Config::default()
+    fn destruct(self) -> (Api<AtlasUser>, Config, Arc<AtlasUserContext>) {
+        (self.crd_api, Config::default(), self.atlas_context)
     }
 }
 
