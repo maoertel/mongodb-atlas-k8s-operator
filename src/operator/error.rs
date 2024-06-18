@@ -12,7 +12,7 @@ pub enum Error {
     },
     #[error("Invalid AtlasUser CRD: {0}")]
     UserInputError(String),
-    #[error("Kubernetes reported error: {source}")]
+    #[error("Atlas reported error: {source}")]
     Atlas {
         #[from]
         source: atlas::error::Error,
