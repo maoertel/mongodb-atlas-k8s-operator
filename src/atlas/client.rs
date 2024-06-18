@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use crate::atlas::error::Error;
 use crate::atlas::error::Result;
+use crate::atlas::user::User;
 use crate::crd::AtlasUser;
 
 pub(crate) const ATLAS_API_CONTENT_TYPE: &str = "application/vnd.atlas.2023-01-01+json";
@@ -26,7 +27,7 @@ impl AtlasClient {
         })
     }
 
-    pub(crate) async fn create_atlas_user(&self, atlas_user: &AtlasUser) -> Result<()> {
+    pub(crate) async fn create_atlas_user(&self, atlas_user: &AtlasUser) -> Result<User> {
         let response = self
             .client
             .post(ATLAS_API_USER_URL)

@@ -1,5 +1,6 @@
 pub mod client;
 pub mod error;
+pub mod user;
 
 use kube::api::Patch;
 use kube::api::PatchParams;
@@ -51,7 +52,7 @@ impl AtlasUserContext {
         };
         let finalizer = json!({ "metadata": { "finalizers": finalizer } });
 
-        let patch: Patch<&Value> = Patch::Merge(&finalizer);
+        let patch = Patch::Merge(&finalizer);
 
         Ok(api.patch(&name, &PatchParams::default(), &patch).await?)
     }

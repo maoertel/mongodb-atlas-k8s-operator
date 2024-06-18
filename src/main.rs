@@ -4,7 +4,7 @@ pub mod crd;
 pub mod error;
 pub mod http_client;
 pub mod logger;
-pub mod reconciler;
+pub mod operator;
 
 use std::sync::Arc;
 
@@ -16,8 +16,8 @@ use crate::atlas::client::ATLAS_API_CONTENT_TYPE;
 use crate::atlas::AtlasUserContext;
 use crate::cli::Cli;
 use crate::error::Result;
-use crate::reconciler::atlasuser::AtlasUserReconciler;
-use crate::reconciler::Reconcile;
+use crate::operator::atlasuser::AtlasUserReconciler;
+use crate::operator::Operator;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,9 +36,10 @@ async fn main() -> Result<()> {
 
     let k8s_client = Client::try_default().await?;
     let atlas_user_reconciler = AtlasUserReconciler::new(k8s_client, atlas_context);
+    let operator = Operator::new(atlas_user_reconciler);
 
-    log::info!("Starting the AtlasUser operator.");
-    atlas_user_reconciler.start().await;
+    log::info!("Starting the operator.");
+    operator.run().await;
 
     Ok(())
 }

@@ -14,8 +14,9 @@ use kube::Api;
 use kube::Resource;
 use serde::de::DeserializeOwned;
 
-use crate::reconciler::error::Error;
-use crate::reconciler::error::Result;
+use crate::operator::atlasuser::AtlasUserReconciler;
+use crate::operator::error::Error;
+use crate::operator::error::Result;
 
 pub trait Reconcile<Crd, Ctx>: Sized
 where
@@ -42,5 +43,19 @@ where
                 }
             })
             .await;
+    }
+}
+
+pub struct Operator {
+    atlas_user_reconciler: AtlasUserReconciler,
+}
+
+impl Operator {
+    pub fn new(atlas_user_reconciler: AtlasUserReconciler) -> Self {
+        Operator { atlas_user_reconciler }
+    }
+
+    pub async fn run(self) {
+        self.atlas_user_reconciler.start().await;
     }
 }

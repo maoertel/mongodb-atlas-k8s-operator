@@ -9,9 +9,9 @@ use kube::ResourceExt;
 
 use crate::atlas::AtlasUserContext;
 use crate::crd::AtlasUser;
-use crate::reconciler::error::Error;
-use crate::reconciler::error::Result;
-use crate::reconciler::Reconcile;
+use crate::operator::error::Error;
+use crate::operator::error::Result;
+use crate::operator::Reconcile;
 
 pub struct AtlasUserReconciler {
     crd_api: Api<AtlasUser>,
