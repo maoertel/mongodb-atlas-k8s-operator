@@ -18,24 +18,23 @@ pub struct AtlasUserSpec {
     pub first_name: String,
     pub last_name: String,
     pub username: String,
-    pub password: Option<String>,
     pub country: String,
-    pub mobile_number: Option<String>,
     pub roles: Vec<Role>,
+    #[serde(default = "generate_password")]
+    pub password: Option<String>,
+    #[serde(default = "generate_dummy_mobile_number")]
+    pub mobile_number: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Role {
+    #[serde(skip_serializing_if = "Option::is_none")]
     org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     group_id: Option<String>,
     role_name: RoleName,
 }
-// #[serde(untagged)]
-// pub enum Role {
-//     Group { group_id: String, role_name: RoleName },
-//     Org { org_id: String, role_name: RoleName },
-// }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, JsonSchema)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -53,4 +52,13 @@ pub enum RoleName {
     GroupReadOnly,
     GroupSearchIndexEditor,
     GroupStreamProcessingOwner,
+}
+
+// TODO handle password creation etc properly through all layers
+fn generate_password() -> Option<String> {
+    Some("24#@$hlkjlj(^$@lljAA".to_string())
+}
+
+fn generate_dummy_mobile_number() -> Option<String> {
+    Some("+49123456789".to_string())
 }

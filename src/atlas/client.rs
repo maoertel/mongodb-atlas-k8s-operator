@@ -1,5 +1,6 @@
 use diqwest::WithDigestAuth;
 use reqwest::Client;
+use reqwest::Response;
 use reqwest::StatusCode;
 use serde::Deserialize;
 
@@ -34,13 +35,13 @@ impl AtlasClient {
             .await?;
 
         match response.status() {
-            StatusCode::OK => handle_ok_response(response).await,
+            StatusCode::OK | StatusCode::CREATED => handle_ok_response(response).await,
             status => handle_error(status, response).await,
         }
     }
 }
 
-async fn handle_ok_response<A>(response: reqwest::Response) -> Result<A>
+async fn handle_ok_response<A>(response: Response) -> Result<A>
 where
     A: for<'de> Deserialize<'de>,
 {
@@ -49,7 +50,7 @@ where
     Ok(cluster_details)
 }
 
-async fn handle_error<A>(status: StatusCode, response: reqwest::Response) -> Result<A> {
+async fn handle_error<A>(status: StatusCode, response: Response) -> Result<A> {
     let message = response.text().await?;
     Err(Error::Api { status, message })
 }
