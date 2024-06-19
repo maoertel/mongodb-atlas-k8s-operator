@@ -21,26 +21,31 @@ const REQUEUE_DELAY: Duration = Duration::from_secs(10);
 
 pub struct AtlasUserContext {
     atlas_client: AtlasClient,
-    api: Api<AtlasUser>,
+    k8s_client: Client,
 }
 
 impl AtlasUserContext {
     pub fn new(atlas_client: AtlasClient, k8s_client: Client) -> Self {
-        let api: Api<AtlasUser> = Api::all(k8s_client);
-        AtlasUserContext { atlas_client, api }
+        AtlasUserContext {
+            atlas_client,
+            k8s_client,
+        }
     }
 
-    pub async fn handle_creation(&self, atlas_user: Arc<AtlasUser>) -> Result<Action> {
+    pub async fn handle_creation(&self, atlas_user: Arc<AtlasUser>, namespace: &str) -> Result<Action> {
         self.atlas_client.create_atlas_user(&atlas_user).await?;
-        finalizer(&self.api, ATLAS_USER_FINALIZER, atlas_user, Self::reconcile)
+
+        let api = Api::namespaced(self.k8s_client.to_owned(), namespace);
+        finalizer(&api, ATLAS_USER_FINALIZER, atlas_user, Self::reconcile)
             .await
             .map_err(Error::from)
     }
 
-    pub async fn handle_deletion(&self, atlas_user: Arc<AtlasUser>) -> Result<Action> {
+    pub async fn handle_deletion(&self, atlas_user: Arc<AtlasUser>, namespace: &str) -> Result<Action> {
         // TODO: As there is no endpoint to delete a user in Atlas, we have to notify about the
         // deletion of the user, so that he can be removed manually from Atlas UI.
-        finalizer(&self.api, ATLAS_USER_FINALIZER, atlas_user, Self::reconcile)
+        let api = Api::namespaced(self.k8s_client.to_owned(), namespace);
+        finalizer(&api, ATLAS_USER_FINALIZER, atlas_user, Self::reconcile)
             .await
             .map_err(Error::from)
     }
