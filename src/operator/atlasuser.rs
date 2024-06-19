@@ -42,13 +42,11 @@ impl Reconcile<AtlasUser, AtlasUserContext> for AtlasUserReconciler {
         match validate_change(&atlas_user) {
             AtlasUserAction::Create => {
                 log::info!("Creating user in Atlas: {atlas_user:?}");
-                context.handle_creation(&atlas_user, &namespace).await?;
-                Ok(Action::requeue(Duration::from_secs(10)))
+                Ok(context.handle_creation(atlas_user, &namespace).await?)
             }
             AtlasUserAction::Delete => {
                 log::info!("Deleting user in Atlas: {atlas_user:?}");
-                context.handle_deletion(&atlas_user, &namespace).await?;
-                Ok(Action::await_change())
+                Ok(context.handle_deletion(atlas_user, &namespace).await?)
             }
             AtlasUserAction::NoOp => {
                 log::info!("No action required for AtlasUser: {atlas_user:?}");
