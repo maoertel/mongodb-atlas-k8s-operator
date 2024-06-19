@@ -5,7 +5,6 @@ use kube::runtime::controller::Action;
 use kube::runtime::watcher::Config;
 use kube::Api;
 use kube::Resource;
-use kube::ResourceExt;
 
 use crate::atlas::AtlasUserContext;
 use crate::crd::AtlasUser;
@@ -35,18 +34,14 @@ enum AtlasUserAction {
 
 impl Reconcile<AtlasUser, AtlasUserContext> for AtlasUserReconciler {
     async fn reconcile(atlas_user: Arc<AtlasUser>, context: Arc<AtlasUserContext>) -> Result<Action> {
-        let namespace = atlas_user.namespace().ok_or(Error::UserInputError({
-            "Expected AtlasUser resource to be namespaced. Can't deploy to an unknown namespace.".to_owned()
-        }))?;
-
         match validate_change(&atlas_user) {
             AtlasUserAction::Create => {
                 log::info!("Creating user in Atlas: {atlas_user:?}");
-                Ok(context.handle_creation(atlas_user, &namespace).await?)
+                Ok(context.handle_creation(atlas_user).await?)
             }
             AtlasUserAction::Delete => {
                 log::info!("Deleting user in Atlas: {atlas_user:?}");
-                Ok(context.handle_deletion(atlas_user, &namespace).await?)
+                Ok(context.handle_deletion(atlas_user).await?)
             }
             AtlasUserAction::NoOp => {
                 log::info!("No action required for AtlasUser: {atlas_user:?}");

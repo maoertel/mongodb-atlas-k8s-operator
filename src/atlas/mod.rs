@@ -16,6 +16,9 @@ use crate::atlas::error::Error;
 use crate::atlas::error::Result;
 use crate::crd::AtlasUser;
 
+const ATLAS_USER_FINALIZER: &str = "atlasusers.moertel.com/finalizer";
+const REQUEUE_DELAY: Duration = Duration::from_secs(10);
+
 pub struct AtlasUserContext {
     atlas_client: AtlasClient,
     api: Api<AtlasUser>,
@@ -27,31 +30,24 @@ impl AtlasUserContext {
         AtlasUserContext { atlas_client, api }
     }
 
-    pub async fn handle_creation(&self, atlas_user: Arc<AtlasUser>, namespace: &str) -> Result<Action> {
+    pub async fn handle_creation(&self, atlas_user: Arc<AtlasUser>) -> Result<Action> {
         self.atlas_client.create_atlas_user(&atlas_user).await?;
-        self.finalize(atlas_user, namespace).await
+        finalizer(&self.api, ATLAS_USER_FINALIZER, atlas_user, Self::reconcile)
+            .await
+            .map_err(Error::from)
     }
 
-    pub async fn handle_deletion(&self, atlas_user: Arc<AtlasUser>, namespace: &str) -> Result<Action> {
+    pub async fn handle_deletion(&self, atlas_user: Arc<AtlasUser>) -> Result<Action> {
         // TODO: As there is no endpoint to delete a user in Atlas, we have to notify about the
         // deletion of the user, so that he can be removed manually from Atlas UI.
-        self.finalize(atlas_user, namespace).await
-    }
-
-    async fn finalize(&self, atlas_user: Arc<AtlasUser>, _namespace: &str) -> Result<Action> {
-        finalizer(
-            &self.api,
-            "atlasusers.moertel.com/finalizer",
-            atlas_user,
-            Self::reconcile,
-        )
-        .await
-        .map_err(Error::from)
+        finalizer(&self.api, ATLAS_USER_FINALIZER, atlas_user, Self::reconcile)
+            .await
+            .map_err(Error::from)
     }
 
     async fn reconcile(event: Event<AtlasUser>) -> Result<Action> {
         match event {
-            Event::Apply(_atlas_user) => Ok(Action::requeue(Duration::from_secs(10))),
+            Event::Apply(_atlas_user) => Ok(Action::requeue(REQUEUE_DELAY)),
             Event::Cleanup(_atlas_user) => Ok(Action::await_change()),
         }
     }
