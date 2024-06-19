@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
-use kube::runtime::finalizer;
+use kube::runtime::finalizer::Error as FError;
 use reqwest::StatusCode;
+use std::error::Error as StdError;
 use thiserror::Error as ThisError;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -28,10 +29,8 @@ pub enum FinalizerError {
     ApplyFailed(String),
     #[error("Failed to clean up object: {0}")]
     CleanupFailed(String),
-    #[error("Failed to add finalizer: {0}")]
-    AddFinalizer(kube::Error),
-    #[error("Failed to remove finalizer: {0}")]
-    RemoveFinalizer(kube::Error),
+    #[error(transparent)]
+    AddRemove(#[from] kube::Error),
     #[error("Object has no name")]
     UnnamedObject,
     #[error("Invalid finalizer")]
@@ -39,18 +38,17 @@ pub enum FinalizerError {
 }
 
 impl Error {
-    pub(crate) fn from<K: std::error::Error + 'static>(e: finalizer::Error<K>) -> Self {
+    pub(crate) fn from<K: StdError + 'static>(e: FError<K>) -> Self {
         match e {
-            finalizer::Error::ApplyFailed(e) => {
+            FError::ApplyFailed(e) => {
                 Error::Finalizer(FinalizerError::ApplyFailed(format!("Failed to apply object: {e}")))
             }
-            finalizer::Error::CleanupFailed(e) => {
+            FError::CleanupFailed(e) => {
                 Error::Finalizer(FinalizerError::CleanupFailed(format!("Failed to apply object: {e}")))
             }
-            finalizer::Error::AddFinalizer(e) => Error::Finalizer(FinalizerError::AddFinalizer(e)),
-            finalizer::Error::RemoveFinalizer(e) => Error::Finalizer(FinalizerError::RemoveFinalizer(e)),
-            finalizer::Error::UnnamedObject => Error::Finalizer(FinalizerError::UnnamedObject),
-            finalizer::Error::InvalidFinalizer => Error::Finalizer(FinalizerError::InvalidFinalizer),
+            FError::AddFinalizer(e) | FError::RemoveFinalizer(e) => Error::Finalizer(FinalizerError::from(e)),
+            FError::UnnamedObject => Error::Finalizer(FinalizerError::UnnamedObject),
+            FError::InvalidFinalizer => Error::Finalizer(FinalizerError::InvalidFinalizer),
         }
     }
 }
