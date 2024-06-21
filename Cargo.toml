@@ -14,7 +14,7 @@ reqwest = { version = "0.12.4", default-features = false, features = ["gzip", "j
 diqwest = "3.0.0"
 url = { version = "2.5.0", features = ["serde"] }
 
-kube = { version = "0.92.0", features = ["runtime", "derive"] }
+kube = { version = "0.92.1", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.22.0", features = ["latest"] }
 schemars = "0.8"
 
