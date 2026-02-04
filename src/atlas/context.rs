@@ -3,12 +3,11 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use kube::runtime::controller::Action;
-use kube::ResourceExt;
 use kuberator::cache::StaticApiProvider;
 use kuberator::error::Error as KubeError;
 use kuberator::error::Result as KubeResult;
 use kuberator::k8s::K8sRepository;
-use kuberator::{Context, Finalize, ObserveGeneration};
+use kuberator::{Context, Finalize, ObserveGeneration, TryResource};
 use tracing::{info, warn};
 
 use crate::atlas::error::Error;
@@ -36,15 +35,6 @@ impl AtlasUserContext {
         }
     }
 
-    /// Gets name and namespace from the resource
-    fn get_name_and_namespace(atlas_user: &AtlasUser) -> KubeResult<(String, String)> {
-        let name = atlas_user.name_any();
-        let namespace = atlas_user
-            .namespace()
-            .ok_or_else(|| KubeError::UserInput("AtlasUser must be namespaced".to_string()))?;
-        Ok((name, namespace))
-    }
-
     /// Determines if the resource needs to be updated based on generation
     fn needs_update(&self, atlas_user: &AtlasUser) -> bool {
         let current_gen = atlas_user.metadata.generation.unwrap_or(0);
@@ -58,7 +48,7 @@ impl AtlasUserContext {
 
     /// Invites a new user to Atlas
     async fn invite_user(&self, atlas_user: Arc<AtlasUser>) -> KubeResult<Action> {
-        let (name, namespace) = Self::get_name_and_namespace(&atlas_user)?;
+        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
         let spec = &atlas_user.spec;
 
         info!(name = %name, namespace = %namespace, username = %spec.username, "Inviting new user to Atlas");
@@ -80,7 +70,7 @@ impl AtlasUserContext {
 
     /// Updates an existing user in Atlas
     async fn update_user(&self, atlas_user: Arc<AtlasUser>, user_id: &str) -> KubeResult<Action> {
-        let (name, namespace) = Self::get_name_and_namespace(&atlas_user)?;
+        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
         let spec = &atlas_user.spec;
 
         info!(name = %name, namespace = %namespace, user_id = %user_id, "Updating user in Atlas");
@@ -104,7 +94,7 @@ impl AtlasUserContext {
 
     /// Syncs the status from Atlas to the K8s resource
     async fn sync_status(&self, atlas_user: Arc<AtlasUser>, user_id: &str) -> KubeResult<Action> {
-        let (name, namespace) = Self::get_name_and_namespace(&atlas_user)?;
+        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
         let spec = &atlas_user.spec;
 
         info!(name = %name, namespace = %namespace, "Syncing user status from Atlas");
@@ -145,7 +135,7 @@ impl Context<AtlasUser, AtlasUserK8sRepo, StaticApiProvider<AtlasUser>> for Atla
     }
 
     async fn handle_apply(&self, atlas_user: Arc<AtlasUser>) -> KubeResult<Action> {
-        let (name, namespace) = Self::get_name_and_namespace(&atlas_user)?;
+        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
         let current_gen = atlas_user.metadata.generation.unwrap_or(1);
 
         // Check if we have a user_id from previous reconciliation
@@ -202,7 +192,7 @@ impl Context<AtlasUser, AtlasUserK8sRepo, StaticApiProvider<AtlasUser>> for Atla
     }
 
     async fn handle_cleanup(&self, atlas_user: Arc<AtlasUser>) -> KubeResult<Action> {
-        let (name, namespace) = Self::get_name_and_namespace(&atlas_user)?;
+        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
 
         if !self.config.safe_to_delete {
             info!(
