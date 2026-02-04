@@ -2,20 +2,20 @@
 
 A Rust-based Kubernetes Operator for managing MongoDB Atlas users. Built with the [kuberator](https://crates.io/crates/kuberator) framework, this operator watches `AtlasUser` custom resources and manages corresponding users in MongoDB Atlas via the Atlas Admin API v2025-02-19 (invitation-based user management).
 
+This operator is intended to be an example for the kuberator framework and may not cover all production use cases.
+
 ## Features
 
 - Invite users to MongoDB Atlas organizations
 - Manage organization and project-level role assignments
 - Assign users to teams
 - Track user status (Pending, Active, Deleted)
-- Graceful shutdown handling (SIGINT/SIGTERM)
-- Observed generation pattern for idempotent updates
 
 ## Prerequisites
 
 - Kubernetes cluster
 - MongoDB Atlas organization with API access
-- Atlas OAuth access token (service account recommended)
+- Atlas access token (from Atlas service account)
 
 ## Installation
 
