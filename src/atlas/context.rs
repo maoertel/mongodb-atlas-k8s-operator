@@ -7,14 +7,20 @@ use kuberator::cache::StaticApiProvider;
 use kuberator::error::Error as KubeError;
 use kuberator::error::Result as KubeResult;
 use kuberator::k8s::K8sRepository;
-use kuberator::{Context, Finalize, ObserveGeneration, TryResource};
-use tracing::{info, warn};
+use kuberator::Context;
+use kuberator::Finalize;
+use kuberator::ObserveGeneration;
+use kuberator::TryResource;
+use tracing::info;
+use tracing::warn;
 
 use crate::atlas::error::Error;
 use crate::atlas::repository::AtlasUserRepository;
 use crate::atlas::user_request::UserRequest;
 use crate::config::AtlasUserConfig;
-use crate::crd::{AtlasUser, AtlasUserStatus, UserOrgMembershipStatus};
+use crate::crd::AtlasUser;
+use crate::crd::AtlasUserStatus;
+use crate::crd::UserOrgMembershipStatus;
 use crate::k8s::AtlasUserK8sRepo;
 
 const FINALIZER: &str = "atlasusers.moertel.com/finalizer";
@@ -48,7 +54,7 @@ impl AtlasUserContext {
 
     /// Invites a new user to Atlas
     async fn invite_user(&self, atlas_user: Arc<AtlasUser>) -> KubeResult<Action> {
-        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
+        let (name, namespace) = (atlas_user.try_name()?, atlas_user.try_namespace()?);
         let spec = &atlas_user.spec;
 
         info!(name = %name, namespace = %namespace, username = %spec.username, "Inviting new user to Atlas");

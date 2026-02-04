@@ -1,6 +1,7 @@
 use serde::Serialize;
 
-use crate::crd::{AtlasUserRoles, AtlasUserSpec};
+use crate::crd::AtlasUserRoles;
+use crate::crd::AtlasUserSpec;
 
 /// Request body for inviting or updating an Atlas user
 #[derive(Serialize, Debug)]

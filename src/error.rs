@@ -2,7 +2,8 @@ use std::fmt::Debug;
 
 use thiserror::Error as ThisError;
 
-use crate::{atlas, config};
+use crate::atlas;
+use crate::config;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

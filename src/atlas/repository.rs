@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
-use reqwest::{header, Client, Response, StatusCode};
+use reqwest::header;
+use reqwest::Client;
+use reqwest::Response;
+use reqwest::StatusCode;
 use serde::Deserialize;
 
-use crate::atlas::error::{Error, Result};
+use crate::atlas::error::Error;
+use crate::atlas::error::Result;
 use crate::atlas::user_request::UserRequest;
 use crate::atlas::user_response::UserResponse;
 

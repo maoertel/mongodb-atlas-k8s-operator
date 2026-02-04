@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
+use chrono::Utc;
 use serde::Deserialize;
 
-use crate::crd::{AtlasUserRoles, UserOrgMembershipStatus};
+use crate::crd::AtlasUserRoles;
+use crate::crd::UserOrgMembershipStatus;
 
 /// Response from Atlas API for user operations
 #[derive(Deserialize, Debug)]
