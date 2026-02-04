@@ -2,7 +2,6 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: atlasusers.moertel.com
-  namespace: default # For easier deployment and avoid permissions collisions on most clusters, the resource is namespace-scoped. More information at: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/
 spec:
   group: moertel.com
   names:
@@ -18,6 +17,8 @@ spec:
     - name: v1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -25,39 +26,91 @@ spec:
             spec:
               type: object
               properties:
-                country:
+                orgId:
                   type: string
-                firstName:
-                  type: string
-                lastName:
-                  type: string
-                mobileNumber:
-                  type: string
-                password:
-                  type: string
-                  minLength: 8
-                roles:
-                  type: array
-                  items:
-                    type: object
-                    x-kubernetes-validations:
-                      - rule: "has(self.groupId) && (!has(self.orgId)) || (!has(self.groupId) && has(self.orgId))"
-                        message: "Either groupId or orgId must be set, but not both."
-                    properties:
-                      groupId:
-                        type: string
-                      orgId:
-                        type: string
-                      roleName:
-                        type: string
-                    required:
-                      - roleName
+                  description: The MongoDB Atlas organization ID
                 username:
                   type: string
                   format: email
+                  description: The email address of the user to invite/manage
+                roles:
+                  type: object
+                  description: Role assignments for the user
+                  properties:
+                    groupRoleAssignments:
+                      type: array
+                      description: Group (project) role assignments
+                      items:
+                        type: object
+                        properties:
+                          groupId:
+                            type: string
+                            description: The group (project) ID
+                          groupRoles:
+                            type: array
+                            description: The roles to assign within this group
+                            items:
+                              type: string
+                              enum:
+                                - GROUP_CLUSTER_MANAGER
+                                - GROUP_DATA_ACCESS_ADMIN
+                                - GROUP_DATA_ACCESS_READ_ONLY
+                                - GROUP_DATA_ACCESS_READ_WRITE
+                                - GROUP_OWNER
+                                - GROUP_READ_ONLY
+                                - GROUP_SEARCH_INDEX_EDITOR
+                                - GROUP_STREAM_PROCESSING_OWNER
+                        required:
+                          - groupId
+                          - groupRoles
+                    orgRoles:
+                      type: array
+                      description: Organization-level roles
+                      items:
+                        type: string
+                        enum:
+                          - ORG_OWNER
+                          - ORG_MEMBER
+                          - ORG_GROUP_CREATOR
+                          - ORG_BILLING_ADMIN
+                          - ORG_BILLING_READ_ONLY
+                          - ORG_READ_ONLY
+                teamIds:
+                  type: array
+                  description: Team IDs to assign the user to
+                  items:
+                    type: string
               required:
-                - country
-                - firstName
-                - lastName
-                - roles
+                - orgId
                 - username
+                - roles
+            status:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: The Atlas user ID (set after invitation/creation)
+                membershipStatus:
+                  type: string
+                  description: The membership status in the organization
+                  enum:
+                    - ACTIVE
+                    - PENDING
+                    - DELETED
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: The observed generation of the resource
+                error:
+                  type: string
+                  description: Error message if reconciliation failed
+      additionalPrinterColumns:
+        - name: Username
+          type: string
+          jsonPath: .spec.username
+        - name: Status
+          type: string
+          jsonPath: .status.membershipStatus
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

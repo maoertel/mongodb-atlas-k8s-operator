@@ -1,13 +1,19 @@
+use std::sync::Arc;
+
 use clap::Parser;
 
-/// Application to scale mongodb atlas clusters
+/// MongoDB Atlas Kubernetes Operator
 #[derive(Parser)]
 pub struct Cli {
-    /// The public key of your Atlas API key.
-    #[clap(long, requires = "private_key", env = "ATLAS_PUBLIC_KEY")]
-    pub(crate) public_key: String,
+    /// OAuth access token for Atlas API authentication
+    #[clap(long, env = "ATLAS_ACCESS_TOKEN")]
+    pub access_token: Arc<str>,
 
-    /// The private key of your Atlas API key.
-    #[clap(long, requires = "public_key", env = "ATLAS_PRIVATE_KEY")]
-    pub(crate) private_key: String,
+    /// Path to configuration file
+    #[clap(long, short, env = "CONFIG_PATH")]
+    pub config_path: String,
+
+    /// Namespaces to watch (can be specified multiple times)
+    #[clap(long, short, default_value = "default")]
+    pub namespaces: Vec<String>,
 }

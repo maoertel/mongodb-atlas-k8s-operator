@@ -1,45 +1,75 @@
 pub mod atlas;
 pub mod cli;
+pub mod config;
 pub mod crd;
 pub mod error;
-pub mod http_client;
-pub mod logger;
+pub mod k8s;
 pub mod operator;
 
 use std::sync::Arc;
 
 use clap::Parser;
+use kube::Api;
 use kube::Client;
+use kuberator::cache::CachingStrategy;
+use kuberator::cache::StaticApiProvider;
+use kuberator::k8s::K8sRepository;
+use kuberator::Reconcile;
+use tokio::signal::unix::SignalKind;
+use tracing::info;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
-use crate::atlas::client::AtlasClient;
-use crate::atlas::client::ATLAS_API_CONTENT_TYPE;
 use crate::atlas::AtlasUserContext;
+use crate::atlas::AtlasUserRepository;
 use crate::cli::Cli;
+use crate::config::Config;
+use crate::crd::AtlasUser;
 use crate::error::Result;
-use crate::operator::atlasuser::AtlasUserReconciler;
-use crate::operator::Operator;
+use crate::operator::AtlasUserReconciler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    logger::init()?;
+    init_tracing();
 
     let Cli {
-        public_key,
-        private_key,
+        access_token,
+        config_path,
+        namespaces,
     } = Cli::parse();
 
-    let http_client = http_client::accepts(ATLAS_API_CONTENT_TYPE)?;
-    let atlas_client = AtlasClient::new(http_client, public_key, private_key)?;
+    let config = Config::from_file(&config_path)?;
 
+    let atlas_repo = Arc::new(AtlasUserRepository::new(access_token)?);
     let k8s_client = Client::try_default().await?;
-    let atlas_context = Arc::new(AtlasUserContext::new(atlas_client, k8s_client));
+    let api_provider = StaticApiProvider::<AtlasUser>::new(k8s_client.clone(), &namespaces, CachingStrategy::Adhoc);
+    let k8s_repo = Arc::new(K8sRepository::new(api_provider));
+    let context = Arc::new(AtlasUserContext::new(atlas_repo, k8s_repo, config.atlas_user));
+    let crd_api: Api<AtlasUser> = Api::all(k8s_client);
+    let reconciler = AtlasUserReconciler::new(crd_api, context);
 
-    let k8s_client = Client::try_default().await?;
-    let atlas_user_reconciler = AtlasUserReconciler::new(k8s_client, atlas_context);
-    let operator = Operator::new(atlas_user_reconciler);
+    info!("Starting the MongoDB Atlas Kubernetes Operator");
 
-    log::info!("Starting the operator.");
-    operator.run().await;
+    reconciler.start(Some(graceful_shutdown())).await;
+
+    info!("Operator shut down gracefully");
 
     Ok(())
+}
+
+async fn graceful_shutdown() {
+    let mut sigterm = tokio::signal::unix::signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
+
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => info!("Received SIGINT, shutting down"),
+        _ = sigterm.recv() => info!("Received SIGTERM, shutting down"),
+    }
+}
+
+fn init_tracing() {
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with(tracing_subscriber::fmt::layer().json())
+        .init();
 }
