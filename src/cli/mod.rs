@@ -14,6 +14,6 @@ pub struct Cli {
     pub config_path: String,
 
     /// Namespaces to watch (can be specified multiple times)
-    #[clap(long, short)]
-    pub namespaces: Option<Vec<String>>,
+    #[clap(long, short, default_value = "default")]
+    pub namespaces: Vec<String>,
 }

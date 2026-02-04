@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
     let atlas_repo = Arc::new(AtlasUserRepository::new(cli.access_token)?);
 
     let k8s_client = Client::try_default().await?;
-    let namespaces = cli.namespaces.unwrap_or_else(|| vec!["default".to_string()]);
+    let namespaces = cli.namespaces;
     let api_provider = StaticApiProvider::<AtlasUser>::new(k8s_client.clone(), &namespaces, CachingStrategy::Adhoc);
     let k8s_repo = Arc::new(K8sRepository::new(api_provider));
 
