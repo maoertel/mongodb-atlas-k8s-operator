@@ -1,0 +1,3 @@
+atlas_user:
+  requeue_duration: "1m"
+  safe_to_delete: false
