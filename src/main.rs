@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 
     let config = Config::from_file(&cli.config_path)?;
 
-    let atlas_repo = Arc::new(AtlasUserRepository::new(cli.access_token.into())?);
+    let atlas_repo = Arc::new(AtlasUserRepository::new(cli.access_token)?);
 
     let k8s_client = Client::try_default().await?;
     let namespaces = cli.namespaces.unwrap_or_else(|| vec!["default".to_string()]);

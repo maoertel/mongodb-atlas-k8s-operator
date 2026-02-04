@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use clap::Parser;
 
 /// MongoDB Atlas Kubernetes Operator
@@ -5,7 +7,7 @@ use clap::Parser;
 pub struct Cli {
     /// OAuth access token for Atlas API authentication
     #[clap(long, env = "ATLAS_ACCESS_TOKEN")]
-    pub access_token: String,
+    pub access_token: Arc<str>,
 
     /// Path to configuration file
     #[clap(long, short, env = "CONFIG_PATH")]
