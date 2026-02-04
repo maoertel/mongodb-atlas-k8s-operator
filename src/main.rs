@@ -33,21 +33,20 @@ use crate::operator::AtlasUserReconciler;
 async fn main() -> Result<()> {
     init_tracing();
 
-    let cli = Cli::parse();
+    let Cli {
+        access_token,
+        config_path,
+        namespaces,
+    } = Cli::parse();
 
-    let config = Config::from_file(&cli.config_path)?;
+    let config = Config::from_file(&config_path)?;
 
-    let atlas_repo = Arc::new(AtlasUserRepository::new(cli.access_token)?);
-
+    let atlas_repo = Arc::new(AtlasUserRepository::new(access_token)?);
     let k8s_client = Client::try_default().await?;
-    let namespaces = cli.namespaces;
     let api_provider = StaticApiProvider::<AtlasUser>::new(k8s_client.clone(), &namespaces, CachingStrategy::Adhoc);
     let k8s_repo = Arc::new(K8sRepository::new(api_provider));
-
     let context = Arc::new(AtlasUserContext::new(atlas_repo, k8s_repo, config.atlas_user));
-
     let crd_api: Api<AtlasUser> = Api::all(k8s_client);
-
     let reconciler = AtlasUserReconciler::new(crd_api, context);
 
     info!("Starting the MongoDB Atlas Kubernetes Operator");
