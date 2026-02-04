@@ -35,10 +35,7 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    let config = match &cli.config_path {
-        Some(path) => Config::from_file(path)?,
-        _ => Config::default(),
-    };
+    let config = Config::from_file(&cli.config_path)?;
 
     let atlas_repo = Arc::new(AtlasUserRepository::new(cli.access_token.into())?);
 

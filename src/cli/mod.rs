@@ -9,7 +9,7 @@ pub struct Cli {
 
     /// Path to configuration file
     #[clap(long, short, env = "CONFIG_PATH")]
-    pub config_path: Option<String>,
+    pub config_path: String,
 
     /// Namespaces to watch (can be specified multiple times)
     #[clap(long, short)]

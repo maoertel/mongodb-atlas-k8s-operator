@@ -12,13 +12,13 @@ A Rust-based Kubernetes Operator for managing MongoDB Atlas users using the kube
 # Build the project
 cargo build
 
-# Run the operator (requires Atlas OAuth access token)
-cargo run -- --access-token <token>
+# Run the operator (requires config file and Atlas OAuth access token)
+cargo run -- --config config.yaml --access-token <token>
 # Or via environment variables:
-ATLAS_ACCESS_TOKEN=<token> cargo run
+ATLAS_ACCESS_TOKEN=<token> CONFIG_PATH=config.yaml cargo run
 
-# With optional config file and namespace filtering:
-cargo run -- --access-token <token> --config config.yaml --namespaces default --namespaces production
+# With namespace filtering:
+cargo run -- --config config.yaml --access-token <token> --namespaces default --namespaces production
 
 # Run tests
 cargo test

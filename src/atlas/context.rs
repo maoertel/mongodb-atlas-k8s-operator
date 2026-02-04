@@ -141,7 +141,7 @@ impl Context<AtlasUser, AtlasUserK8sRepo, StaticApiProvider<AtlasUser>> for Atla
     }
 
     async fn handle_apply(&self, atlas_user: Arc<AtlasUser>) -> KubeResult<Action> {
-        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
+        let (name, namespace) = (atlas_user.try_name()?, atlas_user.try_namespace()?);
         let current_gen = atlas_user.metadata.generation.unwrap_or(1);
 
         // Check if we have a user_id from previous reconciliation
@@ -149,7 +149,7 @@ impl Context<AtlasUser, AtlasUserK8sRepo, StaticApiProvider<AtlasUser>> for Atla
             .status
             .as_ref()
             .and_then(|s| s.user_id.as_ref())
-            .map(|id| id.to_string());
+            .map(Arc::clone);
 
         let needs_update = self.needs_update(&atlas_user);
 
@@ -179,7 +179,7 @@ impl Context<AtlasUser, AtlasUserK8sRepo, StaticApiProvider<AtlasUser>> for Atla
                     Some(response) => {
                         // Found the user, update status and proceed
                         let mut status = atlas_user.status.clone().unwrap_or_default();
-                        status.user_id = Some(response.id.clone());
+                        status.user_id = Some(Arc::clone(&response.id));
                         status.membership_status = Some(response.org_membership_status);
                         status.error = None;
                         status.with_observed_gen(&atlas_user.metadata);
@@ -198,7 +198,7 @@ impl Context<AtlasUser, AtlasUserK8sRepo, StaticApiProvider<AtlasUser>> for Atla
     }
 
     async fn handle_cleanup(&self, atlas_user: Arc<AtlasUser>) -> KubeResult<Action> {
-        let (name, namespace) = (atlas_user.try_name()?.to_string(), atlas_user.try_namespace()?);
+        let (name, namespace) = (atlas_user.try_name()?, atlas_user.try_namespace()?);
 
         if !self.config.safe_to_delete {
             info!(
