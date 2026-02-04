@@ -1,56 +1,138 @@
 # MongoDB Atlas K8s Operator
 
-As the orginal MongoDB Atlas K8s Operator is not taking Atlas users into account, I thought about writing my own
-operator that handles this. And as there is already a lot of stuff out there for Golang, I decided to write it in Rust.
+A Rust-based Kubernetes Operator for managing MongoDB Atlas users. Built with the [kuberator](https://crates.io/crates/kuberator) framework, this operator watches `AtlasUser` custom resources and manages corresponding users in MongoDB Atlas via the Atlas Admin API v2025-02-19 (invitation-based user management).
 
-It is in a POC state so a lot of happy path and things that are not handled yet, like:
+## Features
 
-- What happens to the passwords (send encrypted via email, put into Vault?)
-- All the error handling regarding Atlas API
-- Update the Status of the k8s resource
+- Invite users to MongoDB Atlas organizations
+- Manage organization and project-level role assignments
+- Assign users to teams
+- Track user status (Pending, Active, Deleted)
+- Graceful shutdown handling (SIGINT/SIGTERM)
+- Observed generation pattern for idempotent updates
 
-## Use it
+## Prerequisites
 
-1. Create the CRD
+- Kubernetes cluster
+- MongoDB Atlas organization with API access
+- Atlas OAuth access token (service account recommended)
 
-```bash
-kubectl create -f crds/atlasusers.yaml
-```
+## Installation
 
-2. Start the operator
-
-In the context of your choice, start the operator with the following command. You need to provide atlas MongoDB API key credentials.
-
-```bash
-cargo run --public-key <public-key> --private-key <private>
-```
-
-3. Create a new MongoDB Atlas `AtlasUser` K8s resource
+### 1. Apply the CRD
 
 ```bash
-kubectl create -f crds/examples/john_doe.yaml
+kubectl apply -f crds/atlasusers.yaml
 ```
 
-What basically deployes something like that:
+### 2. Create a configuration file
+
+```yaml
+# config.yaml
+atlas_user:
+  requeue_duration: "1m"
+  safe_to_delete: false
+```
+
+| Setting | Description |
+|---------|-------------|
+| `requeue_duration` | How often to requeue reconciliation |
+| `safe_to_delete` | Whether to delete users from Atlas when the K8s resource is deleted |
+
+### 3. Start the operator
+
+```bash
+cargo run -- --config config.yaml --access-token <your-atlas-oauth-token>
+```
+
+Or via environment variables:
+
+```bash
+export CONFIG_PATH=config.yaml
+export ATLAS_ACCESS_TOKEN=<your-atlas-oauth-token>
+cargo run
+```
+
+## Usage
+
+### Create an AtlasUser
+
+```bash
+kubectl apply -f crds/examples/john_doe.yaml
+```
+
+Example resource:
 
 ```yaml
 apiVersion: moertel.com/v1
 kind: AtlasUser
 metadata:
-  name: johndoe
+  name: john-doe
   namespace: default
 spec:
-  country: US
-  firstName: John
-  lastName: Doe
-  username: johndoe@example.com
+  orgId: "your-org-id"
+  username: "john.doe@example.com"
   roles:
-  - orgId: "4723423423"
-    roleName: "ORG_OWNER"
+    orgRoles:
+      - ORG_MEMBER
+    groupRoleAssignments:
+      - groupId: "your-project-id"
+        groupRoles:
+          - GROUP_READ_ONLY
+  teamIds: []
 ```
 
-4. Check the created resource in your cluster
+### Check the resource status
 
 ```bash
-kubectl describe atlasusers johndoe
+kubectl get atlasusers
+kubectl describe atlasuser john-doe
 ```
+
+### Available Roles
+
+**Organization Roles:**
+- `ORG_OWNER`
+- `ORG_MEMBER`
+- `ORG_GROUP_CREATOR`
+- `ORG_BILLING_ADMIN`
+- `ORG_BILLING_READ_ONLY`
+- `ORG_READ_ONLY`
+
+**Group (Project) Roles:**
+- `GROUP_CLUSTER_MANAGER`
+- `GROUP_DATA_ACCESS_ADMIN`
+- `GROUP_DATA_ACCESS_READ_ONLY`
+- `GROUP_DATA_ACCESS_READ_WRITE`
+- `GROUP_OWNER`
+- `GROUP_READ_ONLY`
+- `GROUP_SEARCH_INDEX_EDITOR`
+- `GROUP_STREAM_PROCESSING_OWNER`
+
+## CLI Options
+
+| Option | Environment Variable | Description |
+|--------|---------------------|-------------|
+| `--config`, `-c` | `CONFIG_PATH` | Path to configuration file (required) |
+| `--access-token` | `ATLAS_ACCESS_TOKEN` | OAuth access token for Atlas API (required) |
+| `--namespaces`, `-n` | - | Namespaces to watch (default: `default`) |
+
+## Development
+
+```bash
+# Build
+cargo build
+
+# Run tests
+cargo test
+
+# Lint
+cargo clippy
+
+# Format
+cargo fmt
+```
+
+## License
+
+MIT
