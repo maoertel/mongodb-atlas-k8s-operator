@@ -97,18 +97,6 @@ atlas_user:
   safe_to_delete: false    # Whether to delete users from Atlas on K8s resource deletion
 ```
 
-## Code Style
-
-- **Imports**: Do not merge imports. Each import should be on its own line.
-  ```rust
-  // Good
-  use crate::atlas::AtlasUserContext;
-  use crate::atlas::AtlasUserRepository;
-
-  // Bad
-  use crate::atlas::{AtlasUserContext, AtlasUserRepository};
-  ```
-
 ## Dependencies
 
 - **kuberator v0.3.2**: Kubernetes operator framework
